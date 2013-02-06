@@ -1,4 +1,2 @@
 include *.txt
 include AUTHORS
-include AUTHORS
-recursive-include docs *.txt
