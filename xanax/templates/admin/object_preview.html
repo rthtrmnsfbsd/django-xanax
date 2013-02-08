@@ -1,39 +1,7 @@
 {% extends "admin/base_site.html" %}
-{% load url from future %}
-{% load admin_urls %}
-{% load i18n admin_static admin_modify %}
 {% load xanax_tags %}
 
-
-
-{% block extrastyle %}{{ block.super }}<link rel="stylesheet" type="text/css" href="{% static "admin/css/forms.css" %}" />{% endblock %}
-{% block extrahead %}{{ block.super }}
-    {% url 'admin:jsi18n' as jsi18nurl %}
-    <script type="text/javascript" src="{{ jsi18nurl|default:"../../../jsi18n/" }}"></script>
-    {{ media }}
-{% endblock %}
-
-{% block bodyclass %}{{ opts.app_label }}-{{ opts.object_name.lower }} change-form{% endblock %}
-
-{% block breadcrumbs %}
-    <div class="breadcrumbs">
-        <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
-        &rsaquo; <a href="{% url 'admin:app_list' app_label=app_label %}">{{ app_label|capfirst|escape }}</a>
-        &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ module_name }}</a>
-        &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}{{ object.pk }}">{{ object|truncatewords:"18" }}</a>
-        &rsaquo; {% trans 'Preview' %}
-    </div>
-{% endblock %}
-
 {% block content %}
-    <div id="content-main">
-        <div class="module">
-            <form id="changelist-form" action="{{ preview_action }}" method="post"{% if cl.formset.is_multipart %} enctype="multipart/form-data"{% endif %}>
-                {% csrf_token %}
-                {% preview_token %}
-                {% block submit_buttons_bottom %}{% submit_row %}{% endblock %}
-            </form>
-        </div>
-    </div>
-
+    {{ block.super }}
+    {% preview_submit_row %}
 {% endblock %}

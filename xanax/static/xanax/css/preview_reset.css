@@ -1,0 +1,18 @@
+/* HEADER */
+
+#preview-header, #preview-header *,
+#branding, #branding *,
+#user-tools, #user-tools *,
+#preview-submit-row, #preview-submit-row *,
+#preview-breadcrumbs, #preview-breadcrumbs *
+{
+    margin: 0;
+    padding: 0;
+    border: 0;
+    vertical-align: baseline;
+    list-style: none;
+    font-size: 12px;
+    font-family: "Lucida Grande","DejaVu Sans","Bitstream Vera Sans",Verdana,Arial,sans-serif;
+    color: #333;
+    background: none;
+}

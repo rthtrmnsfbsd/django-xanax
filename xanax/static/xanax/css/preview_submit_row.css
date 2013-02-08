@@ -1,0 +1,136 @@
+
+/* HEADER */
+
+#preview-header {
+    background: #417690;
+    color: #ffc;
+    overflow: hidden;
+    position: fixed;
+    top: 0px;
+    width: 100%;
+    z-index: 100000;
+}
+
+#preview-header a:link, #preview-header a:visited {
+    color: white;
+}
+
+#preview-header a:hover {
+    text-decoration: underline;
+}
+
+#branding h1 {
+    padding: 0 10px;
+    font-size: 18px;
+    margin: 8px 0;
+    font-weight: normal;
+    color: #f4f379;
+}
+
+#branding h2 {
+    padding: 0 10px;
+    font-size: 14px;
+    margin: -8px 0 8px 0;
+    font-weight: normal;
+    color: #ffc;
+}
+
+#user-tools {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 1.2em 10px;
+    font-size: 11px;
+    text-align: right;
+    color: #FFFFCC;
+}
+
+#user-tools * {
+    color: #FFFFCC;
+}
+
+/* PREVIEW SUBMIT ROW */
+
+#preview-submit-row {
+    padding: 5px 15px 5px 7px;
+    text-align: right;
+    background: white url(/static/admin/img/nav-bg.gif) 0 100% repeat-x;
+    border: 1px solid #ccc;
+    margin: 0;
+    width: 100%;
+    overflow: hidden;
+    position: fixed;
+    bottom: 0px;
+    z-index: 100000;
+}
+
+#preview-submit-row input {
+    margin: 0 0 0 5px;
+}
+
+#preview-submit-row p {
+    margin: 0.3em;
+}
+
+#preview-submit-row p.deletelink-box {
+    float: left;
+}
+
+#preview-submit-row .deletelink {
+    background: url(/static/admin/img/icon_deletelink.gif) 0 50% no-repeat;
+    padding-left: 14px;
+}
+
+/* FORM BUTTONS */
+
+#preview-submit-row input {
+    background: white url(/static/admin/img/nav-bg.gif) bottom repeat-x;
+    padding: 3px 5px;
+    color: black;
+    border: 1px solid #bbb;
+    border-color: #ddd #aaa #aaa #ddd;
+}
+
+#preview-submit-row input.default {
+    border: 2px solid #5b80b2;
+    background: #7CA0C7 url(/static/admin/img/default-bg.gif) bottom repeat-x;
+    font-weight: bold;
+    color: white;
+    float: right;
+}
+
+#preview-submit-row input {
+    margin: 2px 0 2px 5px;
+    padding: 2px 3px;
+    vertical-align: middle;
+    font-family: "Lucida Grande", Verdana, Arial, sans-serif;
+    font-weight: normal;
+    font-size: 11px;
+}
+
+
+/* PREVIEW BREADCRUMBS */
+
+#preview-breadcrumbs {
+    background: white url(/static/admin/img/nav-bg-reverse.gif) 0 -10px repeat-x;
+    padding: 2px 8px 3px 8px;
+    font-size: 11px;
+    color: #999;
+    border-top: 1px solid white;
+    border-bottom: 1px solid #ccc;
+    text-align: left;
+}
+
+
+#preview-breadcrumbs a:link, #preview-breadcrumbs a:visited {
+    color: #5B80B2;
+    text-decoration: none;
+}
+
+#preview-submit-row-back, #preview-header-back {
+    clear: both;
+}
+
+#changelist-form{
+    margin-right: 20px;
+}

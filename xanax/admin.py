@@ -1,46 +1,26 @@
 # -*- coding: utf-8 -*-
 import logging
-from functools import update_wrapper, partial
+from functools import update_wrapper
 
-from django import forms
-from django.conf import settings
 from django.forms.formsets import all_valid
-from django.forms.models import (modelform_factory, modelformset_factory,
-                                 inlineformset_factory, BaseInlineFormSet)
 from django.contrib import admin
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.admin import widgets, helpers
-from django.contrib.admin.util import unquote, flatten_fieldsets, get_deleted_objects, model_format_dict
-from django.contrib.admin.templatetags.admin_static import static
-from django.contrib import messages
+from django.contrib.admin.util import unquote
 
 from django.views.decorators.csrf import csrf_protect
 
-from django.core.exceptions import PermissionDenied, ValidationError
-from django.core.paginator import Paginator
-from django.core.urlresolvers import reverse
-from django.core.context_processors import csrf
+from django.core.exceptions import PermissionDenied
 
-from django.db import models, transaction, router
-from django.db.models.related import RelatedObject
-from django.db.models.fields import BLANK_CHOICE_DASH, FieldDoesNotExist
-from django.db.models.sql.constants import LOOKUP_SEP, QUERY_TERMS
-
-from django.http import Http404, HttpResponse, HttpResponseRedirect
-from django.shortcuts import get_object_or_404
-from django.template.response import SimpleTemplateResponse, TemplateResponse
+from django.http import Http404
+from django.template.response import  TemplateResponse
 
 from django.utils.decorators import method_decorator
-from django.utils.datastructures import SortedDict
-from django.utils.html import escape, escapejs
-from django.utils.safestring import mark_safe
-from django.utils.text import capfirst, get_text_list
+from django.utils.html import escape
+from django.utils.text import capfirst
 from django.utils.translation import ugettext_lazy as _
-from django.utils.translation import ungettext
 from django.utils.encoding import force_unicode
-from django.middleware.csrf import get_token as get_csrf_token
 from django.utils.crypto import get_random_string
-from xanax.settings import GET_SETTING
+from django_xanax.xanax.settings import GET_SETTING
 
 
 LOGGER = logging.getLogger(__name__)
@@ -85,7 +65,8 @@ class XanaxAdmin(admin.ModelAdmin):
             obj = self.get_object(request, unquote(object_id))
             #LOGGER.debug('get_preview_object id %s, obj %s' % (object_id, obj))
 
-        if request.session.get('admin_preview', False):
+        if request.session.get('admin_preview', False)\
+            and request.method == 'POST':
             #LOGGER.debug('get_preview_object admin_preview True')
             ModelForm = self.get_form(request, obj)
             formsets = []
@@ -180,6 +161,8 @@ class XanaxAdmin(admin.ModelAdmin):
         model = self.model
         opts = model._meta
 
+        #TODO remove jQuery
+
         context = {
             'action_list': [],
             'module_name': capfirst(force_unicode(opts.verbose_name_plural)),
@@ -206,10 +189,8 @@ class XanaxAdmin(admin.ModelAdmin):
             'save_as': self.save_as,
             'save_on_top': self.save_on_top,
             'preview_token': preview_token,
+            'is_admin_preview': True,
             }
-
-        context.update(extra_context or {})
-        
         return TemplateResponse(request, self.object_preview_template or [
             "admin/%s/%s/object_preview.html" % ( opts.app_label, opts.object_name.lower()),
             "admin/%s/object_preview.html" %  opts.app_label,

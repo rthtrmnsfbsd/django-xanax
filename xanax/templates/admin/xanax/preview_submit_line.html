@@ -1,0 +1,97 @@
+{% if is_admin_preview %}
+
+    {% load i18n %}
+    {% load xanax_tags %}
+    {% load url from future  %}
+    {% load admin_urls %}
+
+    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}xanax/css/preview_reset.css" />
+    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}xanax/css/preview_submit_row.css" />
+    <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+
+    <div id="preview-header-back"></div>
+    <div id="preview-header">
+        <div id="branding">
+            <h1 id="site-name">{% trans 'Django administration' %}</h1>
+        </div>
+        {% if user.is_active and user.is_staff %}
+            <div id="user-tools">
+                {% trans 'Welcome,' %}
+                <strong>{% filter force_escape %}{% firstof user.first_name user.username %}{% endfilter %}</strong>.
+                {% block userlinks %}
+                    {% url 'django-admindocs-docroot' as docsroot %}
+                    {% if docsroot %}
+                            <a href="{{ docsroot }}">{% trans 'Documentation' %}</a> /
+                    {% endif %}
+                    <a href="{% url 'admin:password_change' %}">{% trans 'Change password' %}</a> /
+                    <a href="{% url 'admin:logout' %}">{% trans 'Log out' %}</a>
+                {% endblock %}
+            </div>
+        {% endif %}
+        {% block nav-global %}{% endblock %}
+        <div id="preview-breadcrumbs">
+            <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+            &rsaquo; <a href="{% url 'admin:app_list' app_label=app_label %}">{{ app_label|capfirst|escape }}</a>
+            &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ module_name }}</a>
+            &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}{{ object.pk }}">{{ object|truncatewords:"18" }}</a>
+            &rsaquo; {% trans 'Preview' %}
+        </div>
+    </div>
+
+
+    <div id="preview-submit-row">
+        <form id="changelist-form" action="{{ preview_action }}" method="post">
+            {% csrf_token %}
+            {% preview_token %}
+        {% if show_save %}<input type="submit" value="{% trans 'Save' %}" class="default" name="_save" {{ onclick_attrib }}/>{% endif %}
+        {% if show_delete_link %}<p class="deletelink-box"><a href="delete/" class="deletelink">{% trans "Delete" %}</a></p>{% endif %}
+        {% if show_save_as_new %}<input type="submit" value="{% trans 'Save as new' %}" name="_saveasnew" {{ onclick_attrib }}/>{%endif%}
+        {% if show_save_and_add_another %}<input type="submit" value="{% trans 'Save and add another' %}" name="_addanother" {{ onclick_attrib }} />{% endif %}
+        {% if show_save_and_continue %}<input type="submit" value="{% trans 'Save and continue editing' %}" name="_continue" {{ onclick_attrib }}/>{% endif %}
+        </form>
+    </div>
+    <div id="preview-submit-row-back"></div>
+
+    <script>
+
+        $(document).ready(function(){
+
+            var preview_top_height =
+                    $('#preview-header').height()
+                    +parseInt($('#preview-header').css('padding-top').split('px')[0])
+                    +parseInt($('#preview-header').css('padding-bottom').split('px')[0]);
+
+            var preview_bottom_height =
+                    $('#preview-submit-row').height()
+                    +parseInt($('#preview-submit-row').css('padding-top').split('px')[0])
+                    +parseInt($('#preview-submit-row').css('padding-bottom').split('px')[0]);
+
+            $('body *:first').before($('#preview-header-back'));
+            $('body').append($('#preview-submit-row-back'));
+
+            $('#preview-submit-row-back').height(preview_bottom_height);
+            $('#preview-header-back').height(preview_top_height);
+
+            $('#preview-header-back').after($('#preview-header'));
+            $('#preview-submit-row-back').before($('#preview-submit-row'));
+            $('*').each(function( index ) {
+                if ($(this).css('position') == 'fixed'){
+                    if ($(this).css('bottom')!='auto') {
+                        $(this).css('bottom', $(this).css('bottom').split('px')[0]+preview_bottom_height+'px');
+                    } else {
+                    if ($(this).css('top')!='auto') {
+                       $(this).css('top', $(this).css('top').split('px')[0]+preview_top_height+'px');
+                    }
+                    }
+                }
+            });
+            $('#preview-header').css('bottom', 'auto').css('top', '0px');
+            $('#preview-submit-row').css('bottom', '0px').css('top', 'auto');
+
+
+        });
+
+
+
+    </script>
+{% endif %}
