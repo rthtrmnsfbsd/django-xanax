@@ -43,8 +43,15 @@
         <form id="changelist-form" action="{{ preview_action }}" method="post">
             {% csrf_token %}
             {% preview_token %}
+
+        {% if show_edit_link %}<div class="link-submit default" ><a href="../" class="default">{% trans "Edit" %}</a></div>{% endif %}
+        {% if show_back_link %}<div class="link-submit default" style="margin-right: 45px;float: left"><a href="../../" class="default">{% trans 'Back' %}</a></div>{% endif %}
+        {% if show_delete_link %}<p class="deletelink-box"><a href="{% if not is_post %}../{% endif %}delete/" class="deletelink">{% trans "Delete" %}</a></p>{% endif %}
+
         {% if show_save %}<input type="submit" value="{% trans 'Save' %}" class="default" name="_save" {{ onclick_attrib }}/>{% endif %}
-        {% if show_delete_link %}<p class="deletelink-box"><a href="delete/" class="deletelink">{% trans "Delete" %}</a></p>{% endif %}
+        {% if show_back %}<input type="submit" value="{% trans 'Back' %}" style="margin-right: 45px;float: left" class="default" name="_back" {{ onclick_attrib }}/>{% endif %}
+
+        {% if show_publish %}<input type="submit" value="{% trans 'Publish' %}" class="default" name="_publish" {{ onclick_attrib }}/>{% endif %}
         {% if show_save_as_new %}<input type="submit" value="{% trans 'Save as new' %}" name="_saveasnew" {{ onclick_attrib }}/>{%endif%}
         {% if show_save_and_add_another %}<input type="submit" value="{% trans 'Save and add another' %}" name="_addanother" {{ onclick_attrib }} />{% endif %}
         {% if show_save_and_continue %}<input type="submit" value="{% trans 'Save and continue editing' %}" name="_continue" {{ onclick_attrib }}/>{% endif %}

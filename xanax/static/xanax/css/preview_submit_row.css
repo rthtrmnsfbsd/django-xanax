@@ -83,7 +83,8 @@
 
 /* FORM BUTTONS */
 
-#preview-submit-row input {
+#preview-submit-row input,
+#preview-submit-row p.link-submit {
     background: white url(/static/admin/img/nav-bg.gif) bottom repeat-x;
     padding: 3px 5px;
     color: black;
@@ -91,7 +92,8 @@
     border-color: #ddd #aaa #aaa #ddd;
 }
 
-#preview-submit-row input.default {
+#preview-submit-row input.default,
+#preview-submit-row div.link-submit.default {
     border: 2px solid #5b80b2;
     background: #7CA0C7 url(/static/admin/img/default-bg.gif) bottom repeat-x;
     font-weight: bold;
@@ -99,7 +101,23 @@
     float: right;
 }
 
-#preview-submit-row input {
+#preview-submit-row div.link-submit.default {
+    height: 21px;
+    margin-left: 5px;
+    overflow: hidden;
+}
+
+#preview-submit-row div.link-submit.default a {
+    font-weight: bold;
+    color: white;
+    text-decoration: none;
+    margin: 4px;
+    display: block;
+
+}
+
+#preview-submit-row input
+#preview-submit-row div.link-submit{
     margin: 2px 0 2px 5px;
     padding: 2px 3px;
     vertical-align: middle;
