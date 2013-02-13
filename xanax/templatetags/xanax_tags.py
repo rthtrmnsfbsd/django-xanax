@@ -2,7 +2,7 @@
 from django import template
 from django.utils.safestring import mark_safe
 
-from django_xanax.xanax.settings import GET_SETTING
+from xanax.settings import GET_SETTING
 
 
 register = template.Library()

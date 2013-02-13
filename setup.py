@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from distutils.core import setup
+from setuptools import setup, find_packages
 
 
 setup(
@@ -7,7 +7,8 @@ setup(
     version='0.1.0',
     author='Vishnevski Alexey',
     author_email='vishnevski.a@gmail.com',
-    packages=['xanax',],
+    packages=find_packages(),
+    include_package_data=True,
     url='http://pypi.python.org/pypi/django-xanax/',
     license='LICENSE',
     description='Django-xanax is a preview and publish interface for django admin application.',

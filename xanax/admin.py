@@ -2,37 +2,92 @@
 import logging
 from functools import update_wrapper
 
+from django.db import models
 from django.forms.formsets import all_valid
 from django.contrib import admin
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.admin.util import unquote
-
 from django.views.decorators.csrf import csrf_protect
-
 from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
-
 from django.http import Http404
 from django.template.response import  TemplateResponse
-
 from django.utils.decorators import method_decorator
 from django.utils.html import escape
 from django.utils.text import capfirst
 from django.utils.translation import ugettext_lazy as _
 from django.utils.encoding import force_unicode
 from django.utils.crypto import get_random_string
-from django_xanax.xanax.settings import GET_SETTING
 from django.contrib.admin import widgets, helpers
+
+from xanax.settings import GET_SETTING
+
+
 
 LOGGER = logging.getLogger(__name__)
 csrf_protect_m = method_decorator(csrf_protect)
 
+
+#TODO: is it possible to use this?
 class PreviewRelatedManager(object):
     def __init__(self, list):
         self.list = list
 
     def all(self):
         return self.list
+
+
+def fine_setattr(object, attr, value):
+    if object.__dict__.get(attr):
+        setattr(object, attr, value)
+    else:
+        object = object.__class__
+        while object != type:
+            if object.__dict__.get(attr):
+                setattr(object, attr, value)
+                break
+            object = object.__class__
+
+
+def prepare_M2M_field(object, field, m2m_related_list=None):
+    if m2m_related_list == None:
+        m2m_related_list = []
+    fine_setattr(object, field, m2m_related_list)
+
+
+#TODO: NAGOVNOKOZENO?
+def get_inline_objects(formsets):
+    result = {}
+    for formset in formsets:
+        deleted_objects_id = []
+        for form in formset.initial_forms:
+            if formset.can_delete and formset._should_delete_form(form):
+                pk_name = formset._pk_field.name
+                raw_pk_value = form._raw_value(pk_name)
+                pk_value = form.fields[pk_name].clean(raw_pk_value)
+                deleted_objects_id.append(getattr(pk_value, 'pk', pk_value))
+        #TODO: ZATYCHKA?
+        formset._should_delete_form = lambda x: []
+        changed_objects = formset.save(commit=False)
+        changed_objects_id = [i.id for i in changed_objects]
+        inline_objects = [i for i in list(formset.get_queryset())
+                          if i.id not in changed_objects_id] +\
+                         [i for i in changed_objects
+                          if i.id not in deleted_objects_id]
+        result.update({formset.model.__name__: inline_objects})
+    return result
+
+
+def prepare_M2M_set(object, inline_objects):
+    #TODO: check if trought setted
+    for attr_name in [i for i in dir(object) if '_set' == i[-4:]]:
+        attr = getattr(object, attr_name, None)
+        if attr.__class__.__name__ == 'RelatedManager':
+            for key in inline_objects.keys():
+                if key.lower() == attr_name[:-4]:
+                    fine_setattr(object, attr_name, inline_objects[key])
+    return object
+
 
 class XanaxAdmin(admin.ModelAdmin):
     object_preview_template = None
@@ -50,12 +105,16 @@ class XanaxAdmin(admin.ModelAdmin):
     preview_link.allow_tags = True
     preview_link.short_description = 'Preview'
 
-
     def has_preview_permission(self, request, obj=None):
         LOGGER.debug('has_preview_permission  True')
         opts = self.opts
         #return request.user.has_perm(opts.app_label + '.' + opts.get_change_permission())
         return True
+
+    def preview_context_handler(self, context):
+        ''' Customise your preview context here.'''
+        return  context
+
 
     def get_urls(self):
         from django.conf.urls import patterns, url
@@ -75,52 +134,62 @@ class XanaxAdmin(admin.ModelAdmin):
         )
         return admin_preview_url + urlpatterns
 
+
     #TODO: add security decorators
     def add_view(self, request, form_url='', extra_context=None):
-        LOGGER.debug('add_view')
+        if "_popup" in request.REQUEST:
+            return super(XanaxAdmin, self).add_view(request, form_url, extra_context)
         if request.method == 'POST':
             if request.session.get('admin_preview', False):
-                obj = self.get_add_view_object(request)
+                obj, inline_objects = self.get_add_view_object(request)
                 if obj:
                     preview_token = get_random_string(
                         GET_SETTING('XANAX_PREVIEW_TOKEN_LENGTH')
                     )
                     request.session['preview_POST_%s' % preview_token] = request.POST.copy()
                     request.session['admin_preview'] = False
-                    #LOGGER.debug("request.session['preview_POST_%s'] - record POST data"  %  preview_token)
-                    return self.preview_view(request, None, preview_token=preview_token, object=obj)
+                    return self.preview_view(
+                        request,
+                        None,
+                        preview_token=preview_token,
+                        object=obj,
+                        inline_objects=inline_objects
+                    )
             else:
                 preview_token = request.POST.get('preview_token')
                 preview_POST = request.session.get('preview_POST_%s' % preview_token)
-                #LOGGER.debug("request.session['preview_POST_%s'] - read POST data"  %  preview_token)
                 if preview_POST:
                     preview_POST.update(request.POST)
                     request.POST = preview_POST
                     del request.session['preview_POST_%s' % preview_token]
                     if request.POST.get('_back', None):
                         request.session['admin_preview'] = True
-                        return self.add_preview_back(request, None, form_url, extra_context)
+                        return self.add_preview_back(request, None,
+                            form_url, extra_context)
                     del request.session['admin_preview']
         else:
             request.session['admin_preview'] = True
         return super(XanaxAdmin, self).add_view(request, form_url, extra_context)
 
+
     def get_add_view_object(self, request):
         formsets = []
+        inline_objects = new_object = None
         ModelForm = self.get_form(request)
         form = ModelForm(request.POST, request.FILES)
         inline_instances = self.get_inline_instances(request)
         if form.is_valid():
             new_object = self.save_form(request, form, change=False)
-            #FIXME NAGOVNOKOJENO
             cleaned_data = form.cleaned_data
             for f in new_object._meta.many_to_many:
                 if f.name in cleaned_data:
-                    setattr(new_object, 'pk', 0)
-                    setattr(new_object, f.name, cleaned_data[f.name])
-
+                    prepare_M2M_field(
+                        new_object,
+                        f.name,
+                        m2m_related_list=cleaned_data[f.name]
+                    )
         else:
-            return None
+            return None, None
         prefixes = {}
         for FormSet, inline in zip(self.get_formsets(request), inline_instances):
             prefix = FormSet.get_default_prefix()
@@ -132,7 +201,13 @@ class XanaxAdmin(admin.ModelAdmin):
                 save_as_new="_saveasnew" in request.POST,
                 prefix=prefix, queryset=inline.queryset(request))
             formsets.append(formset)
-        return new_object
+
+        if all_valid(formsets):
+            inline_objects = get_inline_objects(formsets)
+        else:
+            return None, None
+        return new_object, inline_objects
+
 
     def add_preview_back(self, request, form_url='', extra_context=None):
         "The 'add' admin view for this model."
@@ -194,17 +269,25 @@ class XanaxAdmin(admin.ModelAdmin):
 
     # TODO: add security decorators
     def change_view(self, request, object_id, form_url='', extra_context=None):
+        if "_popup" in request.REQUEST:
+            return super(XanaxAdmin, self).change_view(request, object_id,
+                form_url, extra_context)
         if request.method == 'POST':
             if request.session.get('admin_preview', False):
-                obj = self.get_change_view_object(request, object_id)
-                if obj:
+                obj, inline_objects = self.get_change_view_object(request, object_id)
+                if obj and inline_objects:
                     preview_token = get_random_string(
                         GET_SETTING('XANAX_PREVIEW_TOKEN_LENGTH')
                     )
                     request.session['preview_POST_%s' % preview_token] = request.POST.copy()
-                    #LOGGER.debug("request.session['preview_POST_%s'] - record POST data"  %  preview_token)
                     request.session['admin_preview'] = False
-                    return self.preview_view(request, None, preview_token=preview_token, object=obj)
+                    return self.preview_view(
+                        request,
+                        None,
+                        preview_token=preview_token,
+                        object=obj,
+                        inline_objects=inline_objects
+                    )
             else:
                 preview_token = request.POST.get('preview_token')
                 preview_POST = request.session.get('preview_POST_%s' % preview_token)
@@ -214,23 +297,26 @@ class XanaxAdmin(admin.ModelAdmin):
                     del request.session['preview_POST_%s' % preview_token]
                     if request.POST.get('_back', None):
                         request.session['admin_preview'] = True
-                        return self.change_preview_back(request, object_id, form_url, extra_context)
+                        return self.change_preview_back(request, object_id,
+                            form_url, extra_context)
                     del request.session['admin_preview']
         else:
             request.session['admin_preview'] = True
-        return super(XanaxAdmin, self).change_view(request, object_id, form_url, extra_context)
+        return super(XanaxAdmin, self).change_view(request, object_id,
+            form_url, extra_context)
 
 
     def get_change_view_object(self, request, object_id=None):
         model = self.model
         opts = model._meta
         obj = self.get_object(request, unquote(object_id))
-
+        inline_objects = new_object = None
         if not self.has_change_permission(request, obj):
             raise PermissionDenied
 
         if obj is None:
-            raise Http404(_('%(name)s object with primary key %(key)r does not exist.') % {'name': force_unicode(opts.verbose_name), 'key': escape(object_id)})
+            raise Http404(_('%(name)s object with primary key %(key)r does not exist.')
+                          % {'name': force_unicode(opts.verbose_name), 'key': escape(object_id)})
         #FIXME is it possible to use _saveasnew?
         if request.method == 'POST' and "_saveasnew" in request.POST:
             return self.add_view(request, form_url=reverse('admin:%s_%s_add' %
@@ -244,8 +330,16 @@ class XanaxAdmin(admin.ModelAdmin):
         form = ModelForm(request.POST, request.FILES, instance=obj)
         if form.is_valid():
             new_object = self.save_form(request, form, change=True)
+            cleaned_data = form.cleaned_data
+            for f in new_object._meta.many_to_many:
+                if f.name in cleaned_data:
+                    prepare_M2M_field(
+                        new_object,
+                        f.name,
+                        m2m_related_list=cleaned_data[f.name]
+                    )
         else:
-            return None
+            return None, None
         prefixes = {}
         for FormSet, inline in zip(self.get_formsets(request, new_object), inline_instances):
             prefix = FormSet.get_default_prefix()
@@ -256,7 +350,14 @@ class XanaxAdmin(admin.ModelAdmin):
                 instance=new_object, prefix=prefix,
                 queryset=inline.queryset(request))
             formsets.append(formset)
-        return new_object
+
+        if all_valid(formsets):
+            inline_objects = get_inline_objects(formsets)
+        else:
+            return None, None
+        new_object = prepare_M2M_set(new_object, inline_objects)
+        return new_object, inline_objects
+
 
     @csrf_protect_m
     def change_preview_back(self, request, object_id, form_url='', extra_context=None):
@@ -270,7 +371,8 @@ class XanaxAdmin(admin.ModelAdmin):
             raise PermissionDenied
 
         if obj is None:
-            raise Http404(_('%(name)s object with primary key %(key)r does not exist.') % {'name': force_unicode(opts.verbose_name), 'key': escape(object_id)})
+            raise Http404(_('%(name)s object with primary key %(key)r does not exist.')
+                          % {'name': force_unicode(opts.verbose_name), 'key': escape(object_id)})
 
         if request.method == 'POST' and "_saveasnew" in request.POST:
             return self.add_view(request, form_url=reverse('admin:%s_%s_add' %
@@ -323,23 +425,24 @@ class XanaxAdmin(admin.ModelAdmin):
         return self.render_change_form(request, context, change=True, obj=obj, form_url=form_url)
 
 
-
-
     # TODO: add security decorators
     # TODO: add preview form and submit row
     # TODO: add preview content
     def preview_view(self, request, object_id=None,
-                     extra_context=None, preview_token=None, object=None):
+                     extra_context=None, preview_token=None,
+                     object=None, inline_objects=None):
         model = self.model
         opts = model._meta
 
         if request.method == 'GET':
             object = self.get_object(request, unquote(object_id))
+        #TODO: inline_objects check
         if object is None:
             raise Http404(_('%(name)s object with primary key %(key)r does not exist.') % {'name': force_unicode(opts.verbose_name), 'key': escape(object_id)})
 
-
+        #TODO: MINIMIZE GOVNOKOD
         context = {
+            'inline_objects': inline_objects,
             'is_post': bool(request.method == 'POST'),
             'action_list': [],
             'module_name': capfirst(force_unicode(opts.verbose_name_plural)),
@@ -369,10 +472,8 @@ class XanaxAdmin(admin.ModelAdmin):
             'object_publish':False,
             }
 
-
         #TODO remove jQuery
-
-
+        context = self.preview_context_handler(context)
         return TemplateResponse(request, self.object_preview_template or [
             "admin/%s/%s/object_preview.html" % ( opts.app_label, opts.object_name.lower()),
             "admin/%s/object_preview.html" %  opts.app_label,
