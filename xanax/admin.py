@@ -471,8 +471,9 @@ class XanaxAdmin(admin.ModelAdmin):
         #TODO remove jQuery
         context = self.preview_context_handler(context)
         return TemplateResponse(request, self.object_preview_template or [
-            "admin/%s/%s/object_preview.html" % ( opts.app_label, opts.object_name.lower()),
-            "admin/%s/object_preview.html" %  opts.app_label,
+            "%s/%s_object_preview.html" % (opts.app_label, opts.object_name.lower()),
+            "admin/%s/%s/object_preview.html" % (opts.app_label, opts.object_name.lower()),
+            "admin/%s/object_preview.html" % opts.app_label,
             "admin/object_preview.html"
         ], context, current_app=self.admin_site.name)
 
