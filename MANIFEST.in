@@ -2,3 +2,4 @@ include *.txt
 include AUTHORS
 recursive-include xanax/static *
 recursive-include xanax/templates *
+recursive-include xanax/templatetags *

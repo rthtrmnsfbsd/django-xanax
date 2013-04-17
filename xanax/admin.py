@@ -2,7 +2,6 @@
 import logging
 from functools import update_wrapper
 
-from django.db import models
 from django.forms.formsets import all_valid
 from django.contrib import admin
 from django.contrib.contenttypes.models import ContentType
@@ -23,8 +22,8 @@ from django.contrib.admin import widgets, helpers
 from xanax.settings import GET_SETTING
 
 
-
 LOGGER = logging.getLogger(__name__)
+
 csrf_protect_m = method_decorator(csrf_protect)
 
 
@@ -55,7 +54,7 @@ def prepare_M2M_field(object, field, m2m_related_list=None):
     fine_setattr(object, field, m2m_related_list)
 
 
-#TODO: NAGOVNOKOZENO?
+# TODO: NAGOVNOKOZENO?
 def get_inline_objects(formsets):
     result = {}
     for formset in formsets:
@@ -66,7 +65,7 @@ def get_inline_objects(formsets):
                 raw_pk_value = form._raw_value(pk_name)
                 pk_value = form.fields[pk_name].clean(raw_pk_value)
                 deleted_objects_id.append(getattr(pk_value, 'pk', pk_value))
-        #TODO: ZATYCHKA?
+        # TODO: ZATYCHKA?
         formset._should_delete_form = lambda x: []
         changed_objects = formset.save(commit=False)
         changed_objects_id = [i.id for i in changed_objects]
@@ -79,7 +78,7 @@ def get_inline_objects(formsets):
 
 
 def prepare_M2M_set(object, inline_objects):
-    #TODO: check if trought setted
+    # TODO: check if trought setted
     for attr_name in [i for i in dir(object) if '_set' == i[-4:]]:
         attr = getattr(object, attr_name, None)
         if attr.__class__.__name__ == 'RelatedManager':
@@ -115,7 +114,6 @@ class XanaxAdmin(admin.ModelAdmin):
         ''' Customise your preview context here.'''
         return  context
 
-
     def get_urls(self):
         from django.conf.urls import patterns, url
 
@@ -127,18 +125,19 @@ class XanaxAdmin(admin.ModelAdmin):
         info = self.model._meta.app_label, self.model._meta.module_name
         urlpatterns = super(XanaxAdmin, self).get_urls()
 
-        admin_preview_url = patterns('',
+        admin_preview_url = patterns(
+            '',
             url(r'^(.+)/preview/$',
             wrap(self.preview_view),
             name='%s_%s_preview' % info),
         )
         return admin_preview_url + urlpatterns
 
-
     #TODO: add security decorators
     def add_view(self, request, form_url='', extra_context=None):
         if "_popup" in request.REQUEST:
-            return super(XanaxAdmin, self).add_view(request, form_url, extra_context)
+            return super(XanaxAdmin, self)\
+                .add_view(request, form_url, extra_context)
         if request.method == 'POST':
             if request.session.get('admin_preview', False):
                 obj, inline_objects = self.get_add_view_object(request)
@@ -170,7 +169,6 @@ class XanaxAdmin(admin.ModelAdmin):
         else:
             request.session['admin_preview'] = True
         return super(XanaxAdmin, self).add_view(request, form_url, extra_context)
-
 
     def get_add_view_object(self, request):
         formsets = []
@@ -207,7 +205,6 @@ class XanaxAdmin(admin.ModelAdmin):
         else:
             return None, None
         return new_object, inline_objects
-
 
     def add_preview_back(self, request, form_url='', extra_context=None):
         "The 'add' admin view for this model."
@@ -266,7 +263,6 @@ class XanaxAdmin(admin.ModelAdmin):
         context.update(extra_context or {})
         return self.render_change_form(request, context, form_url=form_url, add=True)
 
-
     # TODO: add security decorators
     def change_view(self, request, object_id, form_url='', extra_context=None):
         if "_popup" in request.REQUEST:
@@ -275,7 +271,7 @@ class XanaxAdmin(admin.ModelAdmin):
         if request.method == 'POST':
             if request.session.get('admin_preview', False):
                 obj, inline_objects = self.get_change_view_object(request, object_id)
-                if obj and inline_objects:
+                if obj:
                     preview_token = get_random_string(
                         GET_SETTING('XANAX_PREVIEW_TOKEN_LENGTH')
                     )
