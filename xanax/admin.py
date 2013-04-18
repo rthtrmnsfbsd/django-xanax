@@ -1,9 +1,14 @@
 # -*- coding: utf-8 -*-
 import logging
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
 from functools import update_wrapper
 
 from django.forms.formsets import all_valid
 from django.contrib import admin
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.admin.util import unquote
 from django.views.decorators.csrf import csrf_protect
@@ -50,6 +55,45 @@ def prepeare_object(preview_object, preview_token):
     preview_object.__class__ = proxy_model
     preview_object.pk = 0
     return preview_object
+
+
+class PikleFile(object):
+    def __init__(self, stringIO_file):
+        self.file_string = ''.join([i for i in stringIO_file.chunks()])
+        self.field_name = getattr(stringIO_file, 'field_name', None)
+        self.name = getattr(stringIO_file, 'name', None)
+        self.content_type = getattr(stringIO_file, 'content_type', None)
+        self.size = getattr(stringIO_file, 'size', None)
+        self.charset = getattr(stringIO_file, 'charset', None)
+
+    def unpickle(self):
+        return InMemoryUploadedFile(
+        StringIO(self.file_string),
+        self.field_name,
+        self.name,
+        self.content_type,
+        self.size,
+        self.charset
+    )
+
+
+def pickle_files(files):
+    result = {}
+    for key, value in files.items():
+        result.update({
+            key: PikleFile(value)
+        })
+    return result
+
+
+def unpickle_files(files):
+    result = {}
+    for key, value in files.items():
+        result.update({
+            key: value.unpickle()
+        })
+    return result
+
 
 
 # TODO: NAGOVNOKOZENO?
@@ -144,6 +188,7 @@ class XanaxAdmin(admin.ModelAdmin):
                         GET_SETTING('XANAX_PREVIEW_TOKEN_LENGTH')
                     )
                     request.session['preview_POST_%s' % preview_token] = request.POST.copy()
+                    request.session['preview_FILES_%s' % preview_token] = pickle_files(request.FILES)
                     request.session['admin_preview'] = False
                     return self.preview_view(
                         request,
@@ -155,10 +200,14 @@ class XanaxAdmin(admin.ModelAdmin):
             else:
                 preview_token = request.POST.get('preview_token')
                 preview_POST = request.session.get('preview_POST_%s' % preview_token)
+                preview_FILES = unpickle_files(request.session.get('preview_FILES_%s' % preview_token))
                 if preview_POST:
                     preview_POST.update(request.POST)
+                    preview_FILES.update(request.FILES)
                     request.POST = preview_POST
+                    request.FILES = preview_FILES
                     del request.session['preview_POST_%s' % preview_token]
+                    del request.session['preview_FILES_%s' % preview_token]
                     if request.POST.get('_back', None):
                         request.session['admin_preview'] = True
                         return self.add_preview_back(request, None,
@@ -276,7 +325,9 @@ class XanaxAdmin(admin.ModelAdmin):
                     preview_token = get_random_string(
                         GET_SETTING('XANAX_PREVIEW_TOKEN_LENGTH')
                     )
+
                     request.session['preview_POST_%s' % preview_token] = request.POST.copy()
+                    request.session['preview_FILES_%s' % preview_token] = pickle_files(request.FILES)
                     request.session['admin_preview'] = False
                     return self.preview_view(
                         request,
@@ -288,10 +339,14 @@ class XanaxAdmin(admin.ModelAdmin):
             else:
                 preview_token = request.POST.get('preview_token')
                 preview_POST = request.session.get('preview_POST_%s' % preview_token)
+                preview_FILES = unpickle_files(request.session.get('preview_FILES_%s' % preview_token))
                 if preview_POST:
                     preview_POST.update(request.POST)
+                    preview_FILES.update(request.FILES)
                     request.POST = preview_POST
+                    request.FILES = preview_FILES
                     del request.session['preview_POST_%s' % preview_token]
+                    del request.session['preview_FILES_%s' % preview_token]
                     if request.POST.get('_back', None):
                         request.session['admin_preview'] = True
                         return self.change_preview_back(request, object_id,
@@ -480,6 +535,3 @@ class XanaxAdmin(admin.ModelAdmin):
             "admin/%s/object_preview.html" % opts.app_label,
             "admin/object_preview.html"
         ], context, current_app=self.admin_site.name)
-
-
-
