@@ -75,15 +75,15 @@ def get_inline_objects(formsets):
     return result
 
 
-def prepare_M2M_set(object, inline_objects):
+def prepare_M2M_set(preview_object, inline_objects):
     # TODO: check if trought setted
-    for attr_name in [i for i in dir(object) if '_set' == i[-4:]]:
-        attr = getattr(object, attr_name, None)
+    for attr_name in [i for i in dir(preview_object) if '_set' == i[-4:]]:
+        attr = getattr(preview_object, attr_name, None)
         if attr.__class__.__name__ == 'RelatedManager':
             for key in inline_objects.keys():
                 if key.lower() == attr_name[:-4]:
-                    fine_setattr(object, attr_name, inline_objects[key])
-    return object
+                    fine_setattr(preview_object, attr_name, inline_objects[key])
+    return preview_object
 
 
 class XanaxAdmin(admin.ModelAdmin):
@@ -92,7 +92,7 @@ class XanaxAdmin(admin.ModelAdmin):
     def get_list_display(self, request):
         result = super(XanaxAdmin, self).get_list_display(request)
         if not 'preview_link' in result:
-            result +=  ('preview_link',)
+            result += ('preview_link',)
         return result
 
     def preview_link(self, obj):
@@ -149,7 +149,7 @@ class XanaxAdmin(admin.ModelAdmin):
                         request,
                         None,
                         preview_token=preview_token,
-                        object=obj,
+                        preview_object=obj,
                         inline_objects=inline_objects
                     )
             else:
@@ -282,7 +282,7 @@ class XanaxAdmin(admin.ModelAdmin):
                         request,
                         None,
                         preview_token=preview_token,
-                        object=obj,
+                        preview_object=obj,
                         inline_objects=inline_objects
                     )
             else:
@@ -430,14 +430,14 @@ class XanaxAdmin(admin.ModelAdmin):
     # TODO: add preview content
     def preview_view(self, request, object_id=None,
                      extra_context=None, preview_token=None,
-                     object=None, inline_objects=None):
+                     preview_object=None, inline_objects=None):
         model = self.model
         opts = model._meta
 
         if request.method == 'GET':
-            object = self.get_object(request, unquote(object_id))
+            preview_object = self.get_object(request, unquote(object_id))
         #TODO: inline_objects check
-        if object is None:
+        if preview_object is None:
             raise Http404(_('%(name)s object with primary key %(key)r does not exist.') % {'name': force_unicode(opts.verbose_name), 'key': escape(object_id)})
 
         #TODO: MINIMIZE GOVNOKOD
@@ -446,13 +446,13 @@ class XanaxAdmin(admin.ModelAdmin):
             'is_post': bool(request.method == 'POST'),
             'action_list': [],
             'module_name': capfirst(force_unicode(opts.verbose_name_plural)),
-            'object': object,
+            'object': preview_object,
             'app_label':  opts.app_label,
             'opts': opts,
             'title': _('Change %s') % force_unicode(opts.verbose_name),
             'adminform': '',
             'object_id': object_id,
-            'original': object,
+            'original': preview_object,
             'is_popup': "_popup" in request.REQUEST,
             'media': '',
             'inline_admin_formsets': '',
@@ -460,8 +460,8 @@ class XanaxAdmin(admin.ModelAdmin):
             'add': False,
             'change': True,
             'has_add_permission': self.has_add_permission(request),
-            'has_change_permission': self.has_change_permission(request, object),
-            'has_delete_permission': self.has_delete_permission(request, object),
+            'has_change_permission': self.has_change_permission(request, preview_object),
+            'has_delete_permission': self.has_delete_permission(request, preview_object),
             'has_file_field': True, # FIXME - this should check if form or formsets have a FileField,
             'has_absolute_url': hasattr(self.model, 'get_absolute_url'),
             'content_type_id': ContentType.objects.get_for_model(self.model).id,

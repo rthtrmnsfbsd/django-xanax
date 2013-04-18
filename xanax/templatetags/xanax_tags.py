@@ -46,7 +46,7 @@ def preview_submit_row(context):
     is_popup = context.get('is_popup', None)
     save_as = context.get('save_as', None)
     is_post = context.get('is_post', None)
-    if preview_token and is_admin_preview:
+    if is_admin_preview:
         context.update({
             'onclick_attrib': (opts.get_ordered_objects() and change
                                and 'onclick="submitOrderForm();"' or ''),
