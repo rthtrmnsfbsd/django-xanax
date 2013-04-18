@@ -48,6 +48,7 @@ def prepeare_object(preview_object, preview_token):
         {'__module__': __name__}
     )
     preview_object.__class__ = proxy_model
+    preview_object.pk = 0
     return preview_object
 
 
