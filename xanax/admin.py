@@ -27,31 +27,28 @@ LOGGER = logging.getLogger(__name__)
 csrf_protect_m = method_decorator(csrf_protect)
 
 
-#TODO: is it possible to use this?
-class PreviewRelatedManager(object):
-    def __init__(self, list):
-        self.list = list
-
-    def all(self):
-        return self.list
-
-
-def fine_setattr(object, attr, value):
+def fine_setattr(preview_object, attr, value):
     if object.__dict__.get(attr):
-        setattr(object, attr, value)
+        setattr(preview_object, attr, value)
     else:
-        object = object.__class__
-        while object != type:
-            if object.__dict__.get(attr):
-                setattr(object, attr, value)
-                break
-            object = object.__class__
+        setattr(preview_object.__class__, attr, value)
 
 
-def prepare_M2M_field(object, field, m2m_related_list=None):
+def prepare_M2M_field(preview_object, field, m2m_related_list=None):
     if m2m_related_list == None:
         m2m_related_list = []
-    fine_setattr(object, field, m2m_related_list)
+    fine_setattr(preview_object, field, m2m_related_list)
+
+
+def prepeare_object(preview_object, preview_token):
+    proxy_model = type(
+        str(preview_object.__class__.__name__)
+        + 'Preview%s' % preview_token,
+        (preview_object.__class__, ),
+        {'__module__': __name__}
+    )
+    preview_object.__class__ = proxy_model
+    return preview_object
 
 
 # TODO: NAGOVNOKOZENO?
@@ -177,7 +174,10 @@ class XanaxAdmin(admin.ModelAdmin):
         form = ModelForm(request.POST, request.FILES)
         inline_instances = self.get_inline_instances(request)
         if form.is_valid():
-            new_object = self.save_form(request, form, change=False)
+            new_object = prepeare_object(
+                self.save_form(request, form, change=False),
+                get_random_string(GET_SETTING('XANAX_PREVIEW_TOKEN_LENGTH'))
+            )
             cleaned_data = form.cleaned_data
             for f in new_object._meta.many_to_many:
                 if f.name in cleaned_data:
@@ -325,7 +325,10 @@ class XanaxAdmin(admin.ModelAdmin):
 
         form = ModelForm(request.POST, request.FILES, instance=obj)
         if form.is_valid():
-            new_object = self.save_form(request, form, change=True)
+            new_object = prepeare_object(
+                self.save_form(request, form, change=False),
+                get_random_string(GET_SETTING('XANAX_PREVIEW_TOKEN_LENGTH'))
+            )
             cleaned_data = form.cleaned_data
             for f in new_object._meta.many_to_many:
                 if f.name in cleaned_data:
@@ -465,7 +468,7 @@ class XanaxAdmin(admin.ModelAdmin):
             'save_on_top': self.save_on_top,
             'preview_token': preview_token,
             'is_admin_preview': True,
-            'object_publish':False,
+            'object_publish': False,
             }
 
         #TODO remove jQuery
