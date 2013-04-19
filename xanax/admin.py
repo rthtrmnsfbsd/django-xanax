@@ -203,9 +203,8 @@ class XanaxAdmin(admin.ModelAdmin):
                 preview_FILES = unpickle_files(request.session.get('preview_FILES_%s' % preview_token))
                 if preview_POST:
                     preview_POST.update(request.POST)
-                    preview_FILES.update(request.FILES)
                     request.POST = preview_POST
-                    request.FILES = preview_FILES
+                    request.FILES.update(preview_FILES)
                     del request.session['preview_POST_%s' % preview_token]
                     del request.session['preview_FILES_%s' % preview_token]
                     if request.POST.get('_back', None):
@@ -342,9 +341,8 @@ class XanaxAdmin(admin.ModelAdmin):
                 preview_FILES = unpickle_files(request.session.get('preview_FILES_%s' % preview_token))
                 if preview_POST:
                     preview_POST.update(request.POST)
-                    preview_FILES.update(request.FILES)
                     request.POST = preview_POST
-                    request.FILES = preview_FILES
+                    request.FILES.update(preview_FILES)
                     del request.session['preview_POST_%s' % preview_token]
                     del request.session['preview_FILES_%s' % preview_token]
                     if request.POST.get('_back', None):
