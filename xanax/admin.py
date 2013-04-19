@@ -209,7 +209,7 @@ class XanaxAdmin(admin.ModelAdmin):
                     del request.session['preview_FILES_%s' % preview_token]
                     if request.POST.get('_back', None):
                         request.session['admin_preview'] = True
-                        return self.add_preview_back(request, None,
+                        return self.add_preview_back(request,
                             form_url, extra_context)
                     del request.session['admin_preview']
         else:
