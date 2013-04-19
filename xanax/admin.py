@@ -142,9 +142,9 @@ class XanaxAdmin(admin.ModelAdmin):
     def preview_link(self, obj):
         info = obj._meta.app_label, obj._meta.module_name
         url = reverse('admin:%s_%s_preview' % info, args=(obj.id,))
-        return '<a href="%s">preview</a>' % url
+        return _(u'<a href="%s">preview</a>') % url
     preview_link.allow_tags = True
-    preview_link.short_description = 'Preview'
+    preview_link.short_description = _(u'Preview')
 
     def has_preview_permission(self, request, obj=None):
         LOGGER.debug('has_preview_permission  True')
