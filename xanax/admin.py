@@ -52,8 +52,10 @@ def prepeare_object(preview_object, preview_token):
         (preview_object.__class__, ),
         {'__module__': __name__}
     )
+    pk_attname = preview_object._meta.pk.attname
     preview_object.__class__ = proxy_model
-    preview_object.pk = 0
+    preview_object._meta.pk.attname = pk_attname
+    #preview_object.pk = 0
     return preview_object
 
 
@@ -119,6 +121,14 @@ def get_inline_objects(formsets):
     return result
 
 
+class InlineList(list):
+    def all(self):
+        return self
+
+    def count(self):
+        return len(self)
+
+
 def prepare_M2M_set(preview_object, inline_objects):
     # TODO: check if trought setted
     for attr_name in [i for i in dir(preview_object) if '_set' == i[-4:]]:
@@ -126,7 +136,11 @@ def prepare_M2M_set(preview_object, inline_objects):
         if attr.__class__.__name__ == 'RelatedManager':
             for key in inline_objects.keys():
                 if key.lower() == attr_name[:-4]:
-                    fine_setattr(preview_object, attr_name, inline_objects[key])
+                    fine_setattr(
+                        preview_object,
+                        attr_name,
+                        InlineList(inline_objects[key])
+                    )
     return preview_object
 
 
