@@ -90,10 +90,11 @@ def pickle_files(files):
 
 def unpickle_files(files):
     result = {}
-    for key, value in files.items():
-        result.update({
-            key: value.unpickle()
-        })
+    if files:
+        for key, value in files.items():
+            result.update({
+                key: value.unpickle()
+            })
     return result
 
 
